@@ -8,7 +8,6 @@
 
 # サーバ
 - src: jdauphant.nginx
-#- src: geerlingguy.apache
 
 # PHP7.0以降をインストールさせたいため追加
 - src: geerlingguy.repo-remi
