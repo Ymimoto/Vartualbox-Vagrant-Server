@@ -1,0 +1,114 @@
+---
+- hosts: all
+  become: true
+
+  # mariaDBではなくてMySQLをインストールしたい場合は以下のpre_tasksを使う
+  pre_tasks:
+    - name: Install the MySQL repo.
+      yum:
+        name: http://repo.mysql.com/mysql-community-release-el7-7.noarch.rpm
+        state: present
+      when: ansible_os_family == "RedHat"
+  
+    - name: Override variables for MySQL (RedHat).
+      set_fact:
+        mysql_daemon: mysqld
+        mysql_packages: ['mysql-community-server']
+        mysql_log_error: ""
+        mysql_syslog_tag: mysqld
+        mysql_pid_file: /var/run/mysqld/mysqld.pid
+        mysql_socket: /var/lib/mysql/mysql.sock
+      when: ansible_os_family == "RedHat"
+  tasks:
+    - name: stop SELinux
+      selinux: policy=targeted state=disabled
+
+  #以下各種基本的な設定
+  roles:
+    - name: geerlingguy.git
+      tags: git
+    - name: geerlingguy.mysql
+      # 5.7だとセキュリティの都合でうまく設定ができない模様。
+      # このroleの設定で5.7のインストールを行う場合は、手動でアップグレードさせる必要がある。
+      mysql_enablerepo: mysql56-community
+      mysql_packages:
+        - mysql-community-client
+        - mysql-community-server
+      mysql_databases:
+        - name: devDb
+          collation: utf8_general_ci
+          encoding: utf8
+          replicate: 1
+      mysql_users:
+        - name: hoge
+          host: localhost
+          password: fuga
+          priv: "devDb.*:ALL"
+      tags:
+        - mysql
+    - name: jdauphant.nginx
+      nginx_official_repo: True
+      nginx_user: vagrant
+      nginx_remove_sites:
+        - default
+      nginx_sites:
+        service:
+          - listen 80 default_server
+          - server_name localhost
+          - |
+            location / {
+            root   /var/www/webdir;
+            index index.php index.html;
+            }
+          - |
+            location ~ \.php$ {
+              root   /var/www/webdir;
+              include fastcgi_params;
+              fastcgi_pass 127.0.0.1:9000;
+              fastcgi_index index.php;
+              fastcgi_param  SCRIPT_FILENAME  $document_root/$fastcgi_script_name;
+            }
+      tags:
+        - nginx
+    - name: geerlingguy.repo-remi
+      ansible_distribution_major_version: 7
+      tags: repo-remi
+    - name: geerlingguy.php
+      php_version: "7.1" # サポート切れに注意
+      php_packages:
+        - php
+        - php-common
+        - php-cli
+        - php-devel
+        - php-fpm
+        - php-gd
+        - php-curl
+        - php-imap
+        - php-json
+        - php-opcache
+        - php-xml
+        - php-mbstring
+        - php-mysql
+        - php-pecl-xdebug
+      php_date_timezone: "Asia/Tokyo"
+      php_enablerepo: "remi-php71"
+      php_packages_state: latest
+      php_enable_apc: false
+      php_enable_webserver: true
+      php_webserver_daemon: nginx
+      php_enable_php_fpm: true
+      php_fpm_pool_user: vagrant
+      php_fpm_pool_group: vagrant
+      xdebug_remote_enable: On
+      xdebug_remote_autostart: On
+      xdebug_remote_host: 192.168.33.1
+      xdebug_remote_port: 9000
+      xdebug_idekey: debugs
+      xdebug_remote_connect_back: On
+      tags:
+        - php
+    - name: geerlingguy.composer
+      tags:
+        - composer
+  # 以下、作りたいもの固有な設定
+  

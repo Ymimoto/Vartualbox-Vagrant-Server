@@ -1,0 +1,20 @@
+# from galaxy
+
+# composer用
+- src: geerlingguy.git
+
+# DB
+- src: geerlingguy.mysql
+
+# サーバ
+- src: jdauphant.nginx
+#- src: geerlingguy.apache
+
+# PHP7.0以降をインストールさせたいため追加
+- src: geerlingguy.repo-remi
+
+# PHP
+- src: geerlingguy.php
+
+# composer
+- src: geerlingguy.composer
